@@ -1,4 +1,4 @@
-//jshint esversion:6
+// NPM modules
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -10,9 +10,9 @@ const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const findOrCreate = require("mongoose-findorcreate");
 const atlasPass = process.env.ATLAS_PASS;
-
 const app = express();
 
+// initialize NPM modules
 app.use(express.static("public"));
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
@@ -28,12 +28,14 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// connect to MongoDB Atlas
 mongoose.connect("mongodb+srv://admin-jan:" + atlasPass + "@cluster0.njvgj.mongodb.net/userDB", {
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
 mongoose.set("useCreateIndex", true);
 
+// create DB schema (userSchema)
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
@@ -41,11 +43,13 @@ const userSchema = new mongoose.Schema({
   secret: String
 });
 
+
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
 
 const User = mongoose.model("User", userSchema);
 
+// setup Passport
 passport.use(User.createStrategy());
 
 passport.serializeUser(function(user, done) {
@@ -61,7 +65,7 @@ passport.deserializeUser(function(id, done) {
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/secrets",
+    callbackURL: "https://obscure-sierra-42963.herokuapp.com/auth/google/secrets",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
@@ -101,7 +105,6 @@ app.get("/register", function(req, res) {
 });
 
 app.get("/secrets", function(req, res) {
-
   User.find({
     "secret": {
       $ne: null
@@ -161,7 +164,6 @@ app.post("/register", function(req, res) {
   });
 });
 
-
 app.post("/login", function(req, res) {
   const user = new User({
     username: req.body.username,
@@ -178,8 +180,6 @@ app.post("/login", function(req, res) {
     }
   })
 });
-
-
 
 let port = process.env.PORT;
 if (port == null || port == "") {
