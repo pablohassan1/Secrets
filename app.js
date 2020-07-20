@@ -12,20 +12,23 @@ const findOrCreate = require("mongoose-findorcreate");
 const atlasPass = process.env.ATLAS_PASS;
 const app = express();
 
-// initialize NPM modules
+// initialize ejs, body-parser and express.static
 app.use(express.static("public"));
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+// initialize session + inital configuration
 app.use(session({
   secret: "Our little secret.",
   resave: false,
   saveUninitialized: false
 }));
 
+// initialize passport
 app.use(passport.initialize());
+// use passport to set-up the session
 app.use(passport.session());
 
 // connect to MongoDB Atlas
@@ -33,6 +36,7 @@ mongoose.connect("mongodb+srv://admin-jan:" + atlasPass + "@cluster0.njvgj.mongo
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
+// fix deprecation warning
 mongoose.set("useCreateIndex", true);
 
 // create DB schema (userSchema)
@@ -43,19 +47,18 @@ const userSchema = new mongoose.Schema({
   secret: String
 });
 
-
+// add passportLocalMongoose to the userSchema - hash/salt/save password to Mongo DB
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
 
 const User = mongoose.model("User", userSchema);
 
-// setup Passport
+// setup Passport - ceate local login strategy
 passport.use(User.createStrategy());
-
+// passport - serialize/deserialize
 passport.serializeUser(function(user, done) {
   done(null, user.id);
 });
-
 passport.deserializeUser(function(id, done) {
   User.findById(id, function(err, user) {
     done(err, user);
@@ -145,10 +148,12 @@ app.post("/submit", function(req, res) {
 });
 
 app.get("/logout", function(req, res) {
+  // passport logout
   req.logout();
   res.redirect("/");
 });
 
+// new user registration (passport-local-mongoose)
 app.post("/register", function(req, res) {
   User.register({
     username: req.body.username
@@ -169,7 +174,7 @@ app.post("/login", function(req, res) {
     username: req.body.username,
     password: req.body.password
   });
-
+  // passport login
   req.login(user, function(err) {
     if (err) {
       console.log(err);
